@@ -26,12 +26,23 @@ label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;cursor:pointer}
 input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
 input:checked+span{text-decoration:line-through;color:var(--muted)}
 .reset{margin-top:8px;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 14px;border-radius:8px;cursor:pointer}
+[hidden]{display:none!important}
+.lock{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.lock input{width:100%;height:auto;padding:10px;font-size:1rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);margin:8px 0}
+.lock button{width:100%;padding:10px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:1rem;cursor:pointer}
+.err{color:#c0392b;font-size:.85rem;min-height:1.2em;margin-top:6px}
 </style>
 </head>
 <body>
 <main>
 <h1>Suite Chore Chart</h1>
 <p class="sub">Small daily tasks that replace one big weekly clean.</p>
+<div class="lock" id="lock" hidden>
+<form id="lockform"><strong>Enter the household passcode</strong>
+<input type="password" id="pass" placeholder="Passcode" autocomplete="current-password" required>
+<button type="submit">Unlock</button><div class="err" id="lockerr"></div></form>
+</div>
+<div id="app">
 <div class="tabs">
 <button id="tA" aria-pressed="true">Person A</button>
 <button id="tB" aria-pressed="false">Person B</button>
@@ -41,10 +52,12 @@ input:checked+span{text-decoration:line-through;color:var(--muted)}
 <div class="ptext" id="note"></div>
 <div id="days"></div>
 <button class="reset" id="reset">Reset week</button>
+</div>
 </main>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* ===== PASTE YOUR FIREBASE CONFIG HERE (see SETUP.md) ===== */
 const firebaseConfig = {
@@ -127,19 +140,34 @@ $("reset").onclick=()=>{
 };
 render();
 
+const SHARED_EMAIL="chores@chores.com"; // must match the user you add in Firebase Authentication (see SETUP.md)
 if(firebaseConfig.apiKey==="PASTE_HERE"){
   setNote("Not synced yet: add your Firebase config to share check-offs between devices.");
 }else{
   try{
-    const db=getFirestore(initializeApp(firebaseConfig));
-    ref=doc(db,"chores","week");
-    const timer=setTimeout(()=>setNote("Can’t reach shared data yet. Showing your last saved view."),10000);
-    onSnapshot(ref,snap=>{
-      clearTimeout(timer);setNote("");
-      const c=(snap.exists()&&snap.data().checks)||{};
-      state={};Object.keys(c).forEach(k=>{if(c[k])state[k]=1;});
-      cache();render();
-    },()=>{clearTimeout(timer);setNote("Sync error. Check your Firestore rules in SETUP.md.");});
+    const fapp=initializeApp(firebaseConfig);
+    const db=getFirestore(fapp), auth=getAuth(fapp);
+    let unsub=null;
+    $("lockform").onsubmit=e=>{
+      e.preventDefault();$("lockerr").textContent="";
+      signInWithEmailAndPassword(auth,SHARED_EMAIL,$("pass").value)
+        .catch(()=>{$("lockerr").textContent="Wrong passcode, try again.";});
+    };
+    onAuthStateChanged(auth,user=>{
+      if(!user){
+        if(unsub){unsub();unsub=null;}
+        ref=null;$("app").hidden=true;$("lock").hidden=false;return;
+      }
+      $("lock").hidden=true;$("app").hidden=false;
+      ref=doc(db,"chores","week");
+      const timer=setTimeout(()=>setNote("Can\u2019t reach shared data yet. Showing your last saved view."),10000);
+      unsub=onSnapshot(ref,snap=>{
+        clearTimeout(timer);setNote("");
+        const c=(snap.exists()&&snap.data().checks)||{};
+        state={};Object.keys(c).forEach(k=>{if(c[k])state[k]=1;});
+        cache();render();
+      },()=>{clearTimeout(timer);setNote("Sync error. Check your Firestore rules in SETUP.md.");});
+    });
   }catch(e){setNote("Firebase setup error. Check your config.");}
 }
 </script>
