@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suite Chore Chart</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--text:#1f2420;--muted:#6b726c;--line:#e2e0d8;--accent:#2f7d5b;--today:#c98a1b}
+@media (prefers-color-scheme:dark){:root{--bg:#161a17;--card:#202622;--text:#eceee9;--muted:#9aa39c;--line:#333b35;--accent:#5fbf92;--today:#e0a43a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+main{max-width:640px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.sub{color:var(--muted);font-size:.9rem;margin:0 0 16px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tabs button{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;font-size:1rem;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.prog{background:var(--line);border-radius:99px;height:10px;overflow:hidden;margin-bottom:6px}
+.prog div{height:100%;background:var(--accent);width:0;transition:width .25s}
+.ptext{font-size:.85rem;color:var(--muted);margin-bottom:12px}
+.day{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.day.today{border-color:var(--today);box-shadow:0 0 0 1px var(--today)}
+.day h2{font-size:1rem;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:.7rem;background:var(--today);color:#fff;padding:2px 8px;border-radius:99px}
+label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;cursor:pointer}
+input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+input:checked+span{text-decoration:line-through;color:var(--muted)}
+.reset{margin-top:8px;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 14px;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+<h1>Suite Chore Chart</h1>
+<p class="sub">Small daily tasks that replace one big weekly clean.</p>
+<div class="tabs">
+<button id="tA" aria-pressed="true">Person A</button>
+<button id="tB" aria-pressed="false">Person B</button>
+</div>
+<div class="prog"><div id="bar"></div></div>
+<div class="ptext" id="ptext"></div>
+<div class="ptext" id="note"></div>
+<div id="days"></div>
+<button class="reset" id="reset">Reset week</button>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ===== PASTE YOUR FIREBASE CONFIG HERE (see SETUP.md) ===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBBBToPXJhPYQbH0VdVeTX7UbSSiANv-X4",
+  authDomain: "chore-chart-2d0f0.firebaseapp.com",
+  projectId: "chore-chart-2d0f0",
+  storageBucket: "chore-chart-2d0f0.firebasestorage.app",
+  messagingSenderId: "121154080381",
+  appId: "1:121154080381:web:b4eab6c755086d69d9eb14"
+};
+/* ========================================================== */
+
+const FULL=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const T={A:[
+["Bathroom: wipe sink and counter","Tidy up common space"],
+["Laundry: start a load of clothes","Dust common space","Tidy up common space"],
+["Fold and put away laundry","Take dishes up to dishwasher"],
+["Bathroom: clean shower"],
+["Laundry: start a load of clothes","Tidy up common space"],
+["Wash bedding and towels"],
+["Mop floors","Take dishes up to dishwasher"]],
+B:[
+["Fridge check","Take dishes up to dishwasher"],
+["Gather trash and recycling and take out to the curb"],
+["Vacuum common space","Tidy up common space"],
+["Tidy up common space"],
+["Clean toilet and mirror","Take dishes up to dishwasher"],
+["Fold and put away laundry","Tidy up common space"],
+["Bedroom: tidy and vacuum","Tidy up common space"]]};
+
+let person="A", state={}, ref=null;
+const todayIdx=(new Date().getDay()+6)%7;
+const $=id=>document.getElementById(id);
+const setNote=t=>{$("note").textContent=t;};
+
+try{state=JSON.parse(localStorage.getItem("suiteChores")||"{}")||{};}catch(e){state={};}
+const cache=()=>{try{localStorage.setItem("suiteChores",JSON.stringify(state));}catch(e){}};
+
+function push(changes){
+  cache();
+  if(!ref)return;
+  setDoc(ref,{checks:changes},{merge:true}).catch(()=>setNote("Could not sync. Check your connection."));
+}
+
+function render(){
+  const wrap=$("days");wrap.innerHTML="";
+  let total=0,done=0;
+  T[person].forEach((tasks,d)=>{
+    const div=document.createElement("div");
+    div.className="day"+(d===todayIdx?" today":"");
+    const h=document.createElement("h2");
+    h.innerHTML="<span>"+FULL[d]+"</span>"+(d===todayIdx?'<span class="badge">Today</span>':"");
+    div.appendChild(h);
+    tasks.forEach((txt,i)=>{
+      const key=person+"-"+d+"-"+i;total++;if(state[key])done++;
+      const lab=document.createElement("label");
+      const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!state[key];
+      cb.onchange=()=>{
+        if(cb.checked)state[key]=1;else delete state[key];
+        push({[key]:cb.checked});render();
+      };
+      const sp=document.createElement("span");sp.textContent=txt;
+      lab.appendChild(cb);lab.appendChild(sp);div.appendChild(lab);
+    });
+    wrap.appendChild(div);
+  });
+  $("bar").style.width=(total?done/total*100:0)+"%";
+  $("ptext").textContent=done+" of "+total+" done this week";
+  $("tA").setAttribute("aria-pressed",person==="A");
+  $("tB").setAttribute("aria-pressed",person==="B");
+}
+
+$("tA").onclick=()=>{person="A";render();};
+$("tB").onclick=()=>{person="B";render();};
+$("reset").onclick=()=>{
+  const o={};
+  Object.keys(state).forEach(k=>{if(k.startsWith(person+"-")){delete state[k];o[k]=false;}});
+  if(Object.keys(o).length)push(o);
+  render();
+};
+render();
+
+if(firebaseConfig.apiKey==="PASTE_HERE"){
+  setNote("Not synced yet: add your Firebase config to share check-offs between devices.");
+}else{
+  try{
+    const db=getFirestore(initializeApp(firebaseConfig));
+    ref=doc(db,"chores","week");
+    const timer=setTimeout(()=>setNote("Can’t reach shared data yet. Showing your last saved view."),10000);
+    onSnapshot(ref,snap=>{
+      clearTimeout(timer);setNote("");
+      const c=(snap.exists()&&snap.data().checks)||{};
+      state={};Object.keys(c).forEach(k=>{if(c[k])state[k]=1;});
+      cache();render();
+    },()=>{clearTimeout(timer);setNote("Sync error. Check your Firestore rules in SETUP.md.");});
+  }catch(e){setNote("Firebase setup error. Check your config.");}
+}
+</script>
+</body>
+</html>
