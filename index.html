@@ -5,53 +5,68 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Suite Chore Chart</title>
 <style>
-:root{--bg:#f6f5f1;--card:#fff;--text:#1f2420;--muted:#6b726c;--line:#e2e0d8;--accent:#2f7d5b;--today:#c98a1b}
-@media (prefers-color-scheme:dark){:root{--bg:#161a17;--card:#202622;--text:#eceee9;--muted:#9aa39c;--line:#333b35;--accent:#5fbf92;--today:#e0a43a}}
+:root{--bg:#f6f5f1;--card:#fff;--text:#1f2420;--muted:#6b726c;--line:#e2e0d8;--accent:#2f7d5b;--today:#c98a1b;--drop:#e6f3ec}
+@media (prefers-color-scheme:dark){:root{--bg:#161a17;--card:#202622;--text:#eceee9;--muted:#9aa39c;--line:#333b35;--accent:#5fbf92;--today:#e0a43a;--drop:#27382f}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
-main{max-width:640px;margin:0 auto;padding:20px 16px 40px}
+main{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:1.4rem;margin:0 0 4px}
 .sub{color:var(--muted);font-size:.9rem;margin:0 0 16px}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tabs button{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;font-size:1rem;cursor:pointer}
-.tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.layout .bank{grid-column:1 / -1}
+@media (min-width:900px){.layout{grid-template-columns:260px 1fr 1fr}.layout .bank{grid-column:auto;position:sticky;top:12px}}
+@media (max-width:560px){.layout{grid-template-columns:1fr}}
+.panel h2.name{margin:0 0 8px}
+.nameinput{width:100%;font:inherit;font-size:1.15rem;font-weight:700;color:var(--text);background:transparent;border:1px solid transparent;border-radius:8px;padding:4px 8px;margin-left:-8px}
+.nameinput:hover{border-color:var(--line)}
+.nameinput:focus{outline:2px solid var(--accent);background:var(--card)}
 .prog{background:var(--line);border-radius:99px;height:10px;overflow:hidden;margin-bottom:6px}
 .prog div{height:100%;background:var(--accent);width:0;transition:width .25s}
 .ptext{font-size:.85rem;color:var(--muted);margin-bottom:12px}
-.day{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.day,.bankbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .day.today{border-color:var(--today);box-shadow:0 0 0 1px var(--today)}
-.day h2{font-size:1rem;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+.day h3{font-size:.95rem;margin:0 0 4px;display:flex;justify-content:space-between;align-items:center}
 .badge{font-size:.7rem;background:var(--today);color:#fff;padding:2px 8px;border-radius:99px}
-label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;cursor:pointer}
-input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
-input:checked+span{text-decoration:line-through;color:var(--muted)}
+.slot{min-height:34px;border-radius:8px}
+.slot.over{background:var(--drop);outline:2px dashed var(--accent)}
+.empty{color:var(--muted);font-size:.8rem;padding:6px 4px}
+.task{display:flex;gap:8px;align-items:flex-start;padding:6px 2px;border-radius:8px}
+.task input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.task .t{flex:1;cursor:pointer}
+.task input:checked+.t{text-decoration:line-through;color:var(--muted)}
+.grip{flex:none;cursor:grab;touch-action:none;user-select:none;color:var(--muted);padding:0 4px;font-size:1.1rem;line-height:1.3}
+.task.dragging,.bankitem.dragging{opacity:.35}
+.ghost{position:fixed;z-index:99;pointer-events:none;background:var(--card);border:1px solid var(--accent);border-radius:8px;padding:6px 10px;box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:260px;font-size:.9rem}
+.bank h2{font-size:1.05rem;margin:0 0 4px}
+.hint{color:var(--muted);font-size:.8rem;margin:0 0 8px}
+.bankitem{display:flex;gap:6px;align-items:flex-start;padding:6px 4px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--bg)}
+.bankitem .t{flex:1}
+.x{flex:none;background:none;border:0;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1;padding:2px 6px}
+.x:hover{color:#c0392b}
+.add{display:flex;gap:6px;margin-top:8px}
+.add input{flex:1;min-width:0;padding:8px;font-size:.95rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+.add button,.lock button{padding:8px 12px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:.95rem;cursor:pointer}
 .reset{margin-top:8px;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 14px;border-radius:8px;cursor:pointer}
 [hidden]{display:none!important}
-.lock{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-.lock input{width:100%;height:auto;padding:10px;font-size:1rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);margin:8px 0}
-.lock button{width:100%;padding:10px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:1rem;cursor:pointer}
+.lock{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;max-width:420px}
+.lock input{width:100%;padding:10px;font-size:1rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);margin:8px 0}
+.lock button{width:100%;padding:10px;font-size:1rem}
 .err{color:#c0392b;font-size:.85rem;min-height:1.2em;margin-top:6px}
 </style>
 </head>
 <body>
 <main>
 <h1>Suite Chore Chart</h1>
-<p class="sub">Small daily tasks that replace one big weekly clean.</p>
+<p class="sub">Small daily tasks that replace one big weekly clean. Drag the <b>⠿</b> handle to move tasks between days and people.</p>
 <div class="lock" id="lock" hidden>
 <form id="lockform"><strong>Enter the household passcode</strong>
 <input type="password" id="pass" placeholder="Passcode" autocomplete="current-password" required>
 <button type="submit">Unlock</button><div class="err" id="lockerr"></div></form>
 </div>
 <div id="app">
-<div class="tabs">
-<button id="tA" aria-pressed="true">Person A</button>
-<button id="tB" aria-pressed="false">Person B</button>
-</div>
-<div class="prog"><div id="bar"></div></div>
-<div class="ptext" id="ptext"></div>
 <div class="ptext" id="note"></div>
-<div id="days"></div>
-<button class="reset" id="reset">Reset week</button>
+<div class="layout" id="layout"></div>
+<button class="reset" id="reset">Reset week (uncheck everything)</button>
 </div>
 </main>
 <script type="module">
@@ -71,7 +86,7 @@ const firebaseConfig = {
 /* ========================================================== */
 
 const FULL=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-const T={A:[
+const DEFAULTS={A:[
 ["Bathroom: wipe sink and counter","Tidy up common space"],
 ["Laundry: start a load of clothes","Dust common space","Tidy up common space"],
 ["Fold and put away laundry","Take dishes up to dishwasher"],
@@ -88,55 +103,228 @@ B:[
 ["Fold and put away laundry","Tidy up common space"],
 ["Bedroom: tidy and vacuum","Tidy up common space"]]};
 
-let person="A", state={}, ref=null;
+/* plan = { names:{A,B}, bank:[{id,t}], assign:{"A-0":[{id,t}], ...} }
+   Each placed task is its own instance (own id) so it can be checked off independently.
+   Default ids are deterministic so every device builds the same starting plan. */
+function defaultPlan(){
+  const assign={},seen=[];
+  ["A","B"].forEach(p=>DEFAULTS[p].forEach((tasks,d)=>{
+    assign[p+"-"+d]=tasks.map((t,i)=>{if(!seen.includes(t))seen.push(t);return{id:"d-"+p+"-"+d+"-"+i,t};});
+  }));
+  return{names:{A:"Person A",B:"Person B"},bank:seen.map((t,i)=>({id:"b-"+i,t})),assign};
+}
+function sane(p){
+  if(!p||typeof p!=="object")return null;
+  const d=defaultPlan();
+  p.names=Object.assign({},d.names,p.names||{});
+  p.bank=Array.isArray(p.bank)?p.bank:d.bank;
+  p.assign=p.assign&&typeof p.assign==="object"?p.assign:{};
+  ["A","B"].forEach(x=>FULL.forEach((_,i)=>{if(!Array.isArray(p.assign[x+"-"+i]))p.assign[x+"-"+i]=[];}));
+  return p;
+}
+
+let plan=null,state={},ref=null;
 const todayIdx=(new Date().getDay()+6)%7;
 const $=id=>document.getElementById(id);
 const setNote=t=>{$("note").textContent=t;};
+const uid=()=>"u"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 try{state=JSON.parse(localStorage.getItem("suiteChores")||"{}")||{};}catch(e){state={};}
-const cache=()=>{try{localStorage.setItem("suiteChores",JSON.stringify(state));}catch(e){}};
+try{plan=sane(JSON.parse(localStorage.getItem("suitePlan")||"null"));}catch(e){}
+plan=plan||sane(defaultPlan());
+const cache=()=>{try{localStorage.setItem("suiteChores",JSON.stringify(state));localStorage.setItem("suitePlan",JSON.stringify(plan));}catch(e){}};
 
-function push(changes){
+function sync(data){
   cache();
   if(!ref)return;
-  setDoc(ref,{checks:changes},{merge:true}).catch(()=>setNote("Could not sync. Check your connection."));
+  setDoc(ref,data,{merge:true}).catch(()=>setNote("Could not sync. Check your connection."));
+}
+const savePlan=()=>sync({plan:JSON.stringify(plan)});
+const pushChecks=c=>sync({checks:c});
+
+/* ---------- render ---------- */
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+
+function renderBank(){
+  const box=el("section","bank");
+  const b=el("div","bankbox");
+  b.dataset.slot="bank";
+  b.appendChild(el("h2",null,"Task bank"));
+  b.appendChild(el("p","hint","Drag a task onto a day to add it. Drag a placed task back here to remove it."));
+  plan.bank.forEach(item=>{
+    const row=el("div","bankitem");
+    row.dataset.bankid=item.id;
+    const g=el("span","grip","⠿");g.title="Drag onto a day";
+    g.onpointerdown=e=>startDrag(e,row,{kind:"bank",t:item.t});
+    const t=el("span","t",item.t);
+    const x=el("button","x","×");x.title="Delete from bank";x.setAttribute("aria-label","Delete "+item.t+" from bank");
+    x.onclick=()=>{plan.bank=plan.bank.filter(i=>i.id!==item.id);savePlan();render();};
+    row.append(g,t,x);b.appendChild(row);
+  });
+  const f=el("form","add");
+  const inp=el("input");inp.placeholder="New task…";inp.maxLength=120;inp.setAttribute("aria-label","New task name");
+  const btn=el("button",null,"Add");btn.type="submit";
+  f.append(inp,btn);
+  f.onsubmit=e=>{
+    e.preventDefault();
+    const t=inp.value.trim();if(!t)return;
+    plan.bank.push({id:uid(),t});savePlan();render();
+    const n=document.querySelector(".add input");if(n)n.focus();
+  };
+  b.appendChild(f);
+  box.appendChild(b);
+  return box;
+}
+
+function renderPerson(p){
+  const panel=el("section","panel");
+  let total=0,done=0;
+  FULL.forEach((_,d)=>plan.assign[p+"-"+d].forEach(x=>{total++;if(state[x.id])done++;}));
+
+  const h=el("h2","name");
+  const ni=el("input","nameinput");ni.value=plan.names[p];ni.maxLength=30;
+  ni.setAttribute("aria-label","Rename "+plan.names[p]);
+  const commit=()=>{
+    const v=ni.value.trim()||(p==="A"?"Person A":"Person B");
+    ni.value=v;
+    if(v!==plan.names[p]){plan.names[p]=v;savePlan();render();}
+  };
+  ni.onblur=commit;
+  ni.onkeydown=e=>{if(e.key==="Enter")ni.blur();if(e.key==="Escape"){ni.value=plan.names[p];ni.blur();}};
+  h.appendChild(ni);panel.appendChild(h);
+
+  const prog=el("div","prog"),bar=el("div");bar.style.width=(total?done/total*100:0)+"%";prog.appendChild(bar);
+  panel.appendChild(prog);
+  panel.appendChild(el("div","ptext",done+" of "+total+" done this week"));
+
+  FULL.forEach((name,d)=>{
+    const key=p+"-"+d;
+    const day=el("div","day"+(d===todayIdx?" today":""));
+    day.dataset.slot=key;
+    const hh=el("h3");hh.appendChild(el("span",null,name));
+    if(d===todayIdx)hh.appendChild(el("span","badge","Today"));
+    day.appendChild(hh);
+    const slot=el("div","slot");slot.dataset.list=key;
+    const list=plan.assign[key];
+    if(!list.length)slot.appendChild(el("div","empty","Drop tasks here"));
+    list.forEach(x=>{
+      const row=el("div","task");row.dataset.tid=x.id;
+      const g=el("span","grip","⠿");g.title="Drag to move";
+      g.onpointerdown=e=>startDrag(e,row,{kind:"inst",id:x.id,from:key,t:x.t});
+      const cb=el("input");cb.type="checkbox";cb.checked=!!state[x.id];cb.id="c-"+x.id;
+      cb.onchange=()=>{
+        if(cb.checked)state[x.id]=1;else delete state[x.id];
+        pushChecks({[x.id]:cb.checked});render();
+      };
+      const lab=el("label","t",x.t);lab.htmlFor=cb.id;
+      row.append(g,cb,lab);slot.appendChild(row);
+    });
+    day.appendChild(slot);panel.appendChild(day);
+  });
+  return panel;
 }
 
 function render(){
-  const wrap=$("days");wrap.innerHTML="";
-  let total=0,done=0;
-  T[person].forEach((tasks,d)=>{
-    const div=document.createElement("div");
-    div.className="day"+(d===todayIdx?" today":"");
-    const h=document.createElement("h2");
-    h.innerHTML="<span>"+FULL[d]+"</span>"+(d===todayIdx?'<span class="badge">Today</span>':"");
-    div.appendChild(h);
-    tasks.forEach((txt,i)=>{
-      const key=person+"-"+d+"-"+i;total++;if(state[key])done++;
-      const lab=document.createElement("label");
-      const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!state[key];
-      cb.onchange=()=>{
-        if(cb.checked)state[key]=1;else delete state[key];
-        push({[key]:cb.checked});render();
-      };
-      const sp=document.createElement("span");sp.textContent=txt;
-      lab.appendChild(cb);lab.appendChild(sp);div.appendChild(lab);
-    });
-    wrap.appendChild(div);
-  });
-  $("bar").style.width=(total?done/total*100:0)+"%";
-  $("ptext").textContent=done+" of "+total+" done this week";
-  $("tA").setAttribute("aria-pressed",person==="A");
-  $("tB").setAttribute("aria-pressed",person==="B");
+  const ae=document.activeElement;
+  const typing=ae&&ae.tagName==="INPUT"&&ae.type==="text"||ae&&ae.classList&&ae.classList.contains("nameinput");
+  if(typing&&render.fromRemote)return;
+  const L=$("layout");L.innerHTML="";
+  L.append(renderBank(),renderPerson("A"),renderPerson("B"));
 }
 
-$("tA").onclick=()=>{person="A";render();};
-$("tB").onclick=()=>{person="B";render();};
+/* ---------- drag and drop (pointer events: works with mouse and touch) ---------- */
+let drag=null;
+function startDrag(e,row,src){
+  if(e.button!==undefined&&e.button!==0)return;
+  e.preventDefault();
+  drag={src,row,sx:e.clientX,sy:e.clientY,ghost:null,over:null,pid:e.pointerId};
+  window.addEventListener("pointermove",onMove);
+  window.addEventListener("pointerup",onUp);
+  window.addEventListener("pointercancel",onCancel);
+}
+function slotAt(x,y){
+  const e=document.elementFromPoint(x,y);
+  return e&&e.closest?e.closest("[data-slot]"):null;
+}
+function onMove(e){
+  if(!drag)return;
+  if(!drag.ghost){
+    if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<5)return;
+    drag.ghost=el("div","ghost",drag.src.t);document.body.appendChild(drag.ghost);
+    drag.row.classList.add("dragging");
+  }
+  drag.ghost.style.left=(e.clientX+12)+"px";drag.ghost.style.top=(e.clientY+12)+"px";
+  const s=slotAt(e.clientX,e.clientY);
+  if(drag.over&&drag.over!==s)drag.over.classList.remove("over");
+  drag.over=s;
+  if(s&&(s.dataset.slot!=="bank"||drag.src.kind==="inst"))s.classList.add("over");
+  autoScroll(e.clientY);
+}
+function autoScroll(y){
+  const m=60;
+  if(y<m)window.scrollBy(0,-12);else if(y>innerHeight-m)window.scrollBy(0,12);
+}
+function cleanup(){
+  window.removeEventListener("pointermove",onMove);
+  window.removeEventListener("pointerup",onUp);
+  window.removeEventListener("pointercancel",onCancel);
+  if(drag){
+    if(drag.ghost)drag.ghost.remove();
+    drag.row.classList.remove("dragging");
+    if(drag.over)drag.over.classList.remove("over");
+  }
+}
+function onCancel(){cleanup();drag=null;}
+function onUp(e){
+  const d=drag;
+  if(!d||!d.ghost){cleanup();drag=null;return;}
+  const target=slotAt(e.clientX,e.clientY);
+  cleanup();drag=null;
+  if(!target)return;
+  const dest=target.dataset.slot;
+  const src=d.src;
+  if(dest==="bank"){
+    if(src.kind==="inst"){
+      plan.assign[src.from]=plan.assign[src.from].filter(x=>x.id!==src.id);
+      delete state[src.id];
+      savePlan();pushChecks({[src.id]:false});render();
+    }
+    return;
+  }
+  const list=target.querySelector("[data-list]");
+  let idx=plan.assign[dest].length;
+  if(list){
+    const rows=[...list.querySelectorAll(".task")].filter(r=>r!==d.row);
+    const hit=rows.findIndex(r=>{const b=r.getBoundingClientRect();return e.clientY<b.top+b.height/2;});
+    if(hit>=0){
+      const beforeId=rows[hit].dataset.tid;
+      idx=plan.assign[dest].findIndex(x=>x.id===beforeId);
+    }
+  }
+  if(src.kind==="bank"){
+    plan.assign[dest].splice(idx,0,{id:uid(),t:src.t});
+  }else{
+    const from=plan.assign[src.from];
+    const i=from.findIndex(x=>x.id===src.id);
+    if(i<0)return;
+    const[item]=from.splice(i,1);
+    // dest list may be the same array, indexes after removal are already based on the filtered rows
+    let at=plan.assign[dest].length;
+    if(list){
+      const rows=[...list.querySelectorAll(".task")].filter(r=>r!==d.row);
+      const hit=rows.findIndex(r=>{const b=r.getBoundingClientRect();return e.clientY<b.top+b.height/2;});
+      if(hit>=0)at=plan.assign[dest].findIndex(x=>x.id===rows[hit].dataset.tid);
+    }
+    plan.assign[dest].splice(at,0,item);
+  }
+  savePlan();render();
+}
+
 $("reset").onclick=()=>{
-  const o={};
-  Object.keys(state).forEach(k=>{if(k.startsWith(person+"-")){delete state[k];o[k]=false;}});
-  if(Object.keys(o).length)push(o);
-  render();
+  if(!Object.keys(state).length)return;
+  if(!confirm("Uncheck every task for both people?"))return;
+  const o={};Object.keys(state).forEach(k=>{o[k]=false;});
+  state={};pushChecks(o);render();
 };
 render();
 
@@ -160,12 +348,18 @@ if(firebaseConfig.apiKey==="PASTE_HERE"){
       }
       $("lock").hidden=true;$("app").hidden=false;
       ref=doc(db,"chores","week");
-      const timer=setTimeout(()=>setNote("Can\u2019t reach shared data yet. Showing your last saved view."),10000);
+      const timer=setTimeout(()=>setNote("Can’t reach shared data yet. Showing your last saved view."),10000);
       unsub=onSnapshot(ref,snap=>{
         clearTimeout(timer);setNote("");
-        const c=(snap.exists()&&snap.data().checks)||{};
+        const data=snap.exists()?snap.data():{};
+        const c=data.checks||{};
         state={};Object.keys(c).forEach(k=>{if(c[k])state[k]=1;});
-        cache();render();
+        if(typeof data.plan==="string"){
+          try{const p=sane(JSON.parse(data.plan));if(p)plan=p;}catch(e){}
+        }
+        cache();
+        if(drag&&drag.ghost)return; // don't rebuild the page mid-drag
+        render.fromRemote=true;render();render.fromRemote=false;
       },()=>{clearTimeout(timer);setNote("Sync error. Check your Firestore rules in SETUP.md.");});
     });
   }catch(e){setNote("Firebase setup error. Check your config.");}
