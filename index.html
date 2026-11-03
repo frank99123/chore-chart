@@ -52,12 +52,22 @@ h1{font-size:1.4rem;margin:0 0 4px}
 .lock input{width:100%;padding:10px;font-size:1rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);margin:8px 0}
 .lock button{width:100%;padding:10px;font-size:1rem}
 .err{color:#c0392b;font-size:.85rem;min-height:1.2em;margin-top:6px}
+/* Mobile-only controls: hidden on desktop, where the task bank is used instead */
+.task .x,.quickadd,.mhint{display:none}
+.qbtn{background:none;border:1px dashed var(--line);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer;width:100%;text-align:left;margin-top:4px}
+.quickadd .add{margin-top:4px}
+@media (max-width:699px){
+  .layout .bank{display:none}
+  .mhint{display:inline}
+  .task .x{display:block}
+  .quickadd{display:block}
+}
 </style>
 </head>
 <body>
 <main>
 <h1>Suite Chore Chart</h1>
-<p class="sub">Small daily tasks that replace one big weekly clean. Drag the <b>⠿</b> handle to move tasks between days and people.</p>
+<p class="sub">Small daily tasks that replace one big weekly clean. Drag the <b>⠿</b> handle to move tasks between days and people.<span class="mhint"> Tap <b>+ Add task</b> to add one, or <b>×</b> to remove it.</span></p>
 <div class="lock" id="lock" hidden>
 <form id="lockform"><strong>Enter the household passcode</strong>
 <input type="password" id="pass" placeholder="Passcode" autocomplete="current-password" required>
@@ -217,19 +227,63 @@ function renderPerson(p){
         pushChecks({[x.id]:cb.checked});render();
       };
       const lab=el("label","t",x.t);lab.htmlFor=cb.id;
-      row.append(g,cb,lab);slot.appendChild(row);
+      const rm=el("button","x","×");rm.title="Remove";rm.setAttribute("aria-label","Remove "+x.t);
+      rm.onclick=()=>{
+        plan.assign[key]=plan.assign[key].filter(y=>y.id!==x.id);
+        delete state[x.id];
+        savePlan();pushChecks({[x.id]:false});render();
+      };
+      row.append(g,cb,lab,rm);slot.appendChild(row);
     });
-    day.appendChild(slot);panel.appendChild(day);
+    day.appendChild(slot);
+    day.appendChild(renderQuickAdd(key));
+    panel.appendChild(day);
   });
   return panel;
+}
+
+/* Mobile "type to add": a button per day that opens a small input. */
+let quickOpen=null,rendering=false;
+function renderQuickAdd(key){
+  const wrap=el("div","quickadd");
+  if(quickOpen!==key){
+    const b=el("button","qbtn","+ Add task");b.type="button";
+    b.onclick=()=>{quickOpen=key;render();};
+    wrap.appendChild(b);
+    return wrap;
+  }
+  const f=el("form","add");
+  const inp=el("input");inp.placeholder="New task…";inp.maxLength=120;inp.setAttribute("aria-label","New task for this day");
+  inp.dataset.quick=key;
+  const btn=el("button",null,"Add");btn.type="submit";
+  f.append(inp,btn);
+  f.onsubmit=e=>{
+    e.preventDefault();
+    const t=inp.value.trim();if(!t)return;
+    plan.assign[key].push({id:uid(),t});
+    if(!plan.bank.some(i=>i.t.toLowerCase()===t.toLowerCase()))plan.bank.push({id:uid(),t});
+    savePlan();render(); // stays open so several tasks can be added in a row
+  };
+  inp.onkeydown=e=>{if(e.key==="Escape"){quickOpen=null;render();}};
+  inp.onblur=()=>setTimeout(()=>{
+    // close when the user taps away with nothing typed (but not when the Add button took focus)
+    if(rendering||!inp.isConnected||quickOpen!==key)return;
+    if(f.contains(document.activeElement))return;
+    if(!inp.value.trim()){quickOpen=null;render();}
+  },150);
+  wrap.appendChild(f);
+  return wrap;
 }
 
 function render(){
   const ae=document.activeElement;
   const typing=ae&&ae.tagName==="INPUT"&&ae.type==="text"||ae&&ae.classList&&ae.classList.contains("nameinput");
   if(typing&&render.fromRemote)return;
+  rendering=true;
   const L=$("layout");L.innerHTML="";
   L.append(renderBank(),renderPerson("A"),renderPerson("B"));
+  rendering=false;
+  if(quickOpen){const q=L.querySelector('[data-quick="'+quickOpen+'"]');if(q)q.focus({preventScroll:true});}
 }
 
 /* ---------- drag and drop (pointer events: works with mouse and touch) ---------- */
