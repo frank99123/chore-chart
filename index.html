@@ -15,6 +15,7 @@ h1{font-size:1.4rem;margin:0 0 4px}
 .layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .layout .bank{grid-column:1 / -1}
 @media (min-width:900px){.layout{grid-template-columns:260px 1fr 1fr}.layout .bank{grid-column:auto;position:sticky;top:12px}}
+@media (min-width:900px){.layout .bank .bankbox{display:flex;flex-direction:column;max-height:calc(100vh - 24px);margin-bottom:0;padding:8px 10px}.banklist{overflow-y:auto;min-height:0;flex:1}.layout .bank .bankitem{padding:3px 4px;margin-bottom:4px;font-size:.88rem}.layout .bank .hint{font-size:.72rem;margin-bottom:6px}.layout .bank h2{font-size:.95rem}.layout .bank .add{margin-top:6px}.layout .bank .add input,.layout .bank .add button{padding:5px 8px;font-size:.85rem}}
 @media (max-width:560px){.layout{grid-template-columns:1fr}}
 .panel h2.name{margin:0 0 8px}
 .nameinput{width:100%;font:inherit;font-size:1.15rem;font-weight:700;color:var(--text);background:transparent;border:1px solid transparent;border-radius:8px;padding:4px 8px;margin-left:-8px}
@@ -160,7 +161,8 @@ function renderBank(){
   const b=el("div","bankbox");
   b.dataset.slot="bank";
   b.appendChild(el("h2",null,"Task bank"));
-  b.appendChild(el("p","hint","Drag a task onto a day to add it. Drag a placed task back here to remove it."));
+  b.appendChild(el("p","hint","Drag onto a day to add; drag a placed task back here to remove."));
+  const list=el("div","banklist");
   plan.bank.forEach(item=>{
     const row=el("div","bankitem");
     row.dataset.bankid=item.id;
@@ -169,8 +171,9 @@ function renderBank(){
     const t=el("span","t",item.t);
     const x=el("button","x","×");x.title="Delete from bank";x.setAttribute("aria-label","Delete "+item.t+" from bank");
     x.onclick=()=>{plan.bank=plan.bank.filter(i=>i.id!==item.id);savePlan();render();};
-    row.append(g,t,x);b.appendChild(row);
+    row.append(g,t,x);list.appendChild(row);
   });
+  b.appendChild(list);
   const f=el("form","add");
   const inp=el("input");inp.placeholder="New task…";inp.maxLength=120;inp.setAttribute("aria-label","New task name");
   const btn=el("button",null,"Add");btn.type="submit";
